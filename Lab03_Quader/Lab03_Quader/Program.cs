@@ -59,6 +59,35 @@ namespace Lab03_Quader
         {
             return hoehe * breite * laenge;
         }
+        //Beispiel: laenge = 5, breite =10
+        //##########
+        //#        #
+        //#        #
+        //#        #
+        //##########
+        public void DrawFootprint()
+        {
+            int l = (int)Math.Round(laenge);
+            int b = (int)Math.Round(breite);
+
+            for (int i = 0; i < l; i++)
+                Console.Write("#");
+            Console.WriteLine();
+            for (int row = 0; row < b - 2; row++)
+            {
+                Console.Write("#");               // linke Wand
+                for (int col = 0; col < l - 2; col++)
+                    Console.Write(" ");
+                Console.Write("#");               // rechte Wand
+                Console.WriteLine();
+            }
+            if (b > 1)
+            {
+                for (int i = 0; i < l; i++)
+                    Console.Write("#");
+                Console.WriteLine();
+            }
+        }
     }
     internal class Program
     {
@@ -69,6 +98,15 @@ namespace Lab03_Quader
             string eingabe = Console.ReadLine();
 
             Quader q = Quader.Parse(eingabe);   // Klassenmethode
+            q.DrawFootprint();
+            
+            Random random = new Random();
+            List <Quader> list = new List<Quader>();
+            for(int i = 0; i<10; i++)
+            {
+                list.Add(new Quader(random.Next(10, 20), random.Next(10, 20), random.Next(10, 20)));
+                list[i].DrawFootprint();
+            }
 
             Console.WriteLine($"Volumen des Quaders: {q.GetVolume()}mm³");  // Instanzmethode
             Console.ReadKey();
