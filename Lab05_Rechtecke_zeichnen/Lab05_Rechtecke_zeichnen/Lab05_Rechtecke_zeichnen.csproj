@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{8B288AFD-0059-4DFB-8703-3B5599F5E6F9}</ProjectGuid>
+    <ProjectGuid>{129B5F52-583F-49AF-9EE5-EC0C56CEE6E0}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Lab04_Bruchrechnung</RootNamespace>
-    <AssemblyName>Lab04_Bruchrechnung</AssemblyName>
+    <RootNamespace>Lab05_Rechtecke_zeichnen</RootNamespace>
+    <AssemblyName>Lab05_Rechtecke_zeichnen</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -43,7 +43,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Bruch.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
