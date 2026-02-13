@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Example/Example.csproj" />
+  <Project Path="Lab06_Labyrinth/Lab06_Labyrinth.csproj" />
+</Solution>
