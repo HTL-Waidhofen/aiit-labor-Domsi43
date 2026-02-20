@@ -1,4 +1,4 @@
 <Solution>
-  <Project Path="Example/Example.csproj" />
-  <Project Path="Lab06_Labyrinth/Lab06_Labyrinth.csproj" />
+  <Project Path="Example/Example.csproj" Id="79a6695d-0e7f-4017-a0bf-38a681b15eca" />
+  <Project Path="Lab06_Labyrinth/Lab06_Labyrinth.csproj" Id="85e924e4-00da-4c14-a378-5bc27b99ae8d" />
 </Solution>
