@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Controls;
 
 namespace Example
 {
@@ -23,16 +24,14 @@ namespace Example
 
             Loaded += MainWindow_Loaded;
 
-            // Key-Events am Fenster registrieren, PreviewKeyDown fängt Tasten auch dann,
-            // wenn ein Kind-Fokus hat (robuster in vielen WPF-Szenarien).
+           
             PreviewKeyDown += Window_KeyDown;
             KeyDown += Window_KeyDown;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // Versuche den Fokus auf das Fenster zu setzen, damit Key-Events ankommen.
-            // Kombination sorgt in den meisten Fällen dafür, dass das Fenster wirklich Fokus bekommt.
+          
             this.Focus();
             Keyboard.Focus(this);
             FocusManager.SetFocusedElement(this, this);
@@ -50,7 +49,7 @@ namespace Example
 
             _maze = new char[_rows, _cols];
 
-            // Fülle Maze mit Leerzeichen und kopiere die Datei-Inhalte
+            
             for (int i = 0; i < _rows; i++)
             {
                 for (int j = 0; j < _cols; j++)
@@ -59,11 +58,11 @@ namespace Example
                 }
             }
 
-            // Größe des Spielfelds anpassen
+           
             Spielfeld.Width = _cols * CellSize;
             Spielfeld.Height = _rows * CellSize;
 
-            // Wände zeichnen und Startposition der Spielfigur finden
+            
             bool foundPlayer = false;
             for (int i = 0; i < _rows; i++)
             {
@@ -91,11 +90,11 @@ namespace Example
 
             if (!foundPlayer)
             {
-                // Fallback: obere linke Ecke
+          
                 _player = new Figur(0, 0);
             }
 
-            // Spieler-Visual anlegen
+            
             _playerRect = new Rectangle
             {
                 Fill = Brushes.Red,
@@ -150,14 +149,14 @@ namespace Example
                     return;
             }
 
-            // Guard: falls _player noch nicht gesetzt ist, nichts tun
+            
             if (_player == null)
                 return;
 
             if (_player.TryMove(dRow, dCol, CanMoveTo))
             {
                 UpdatePlayerVisual();
-                e.Handled = true; // verhindere unerwünschtes Weiterreichen des Events
+                e.Handled = true; 
             }
         }
     }
