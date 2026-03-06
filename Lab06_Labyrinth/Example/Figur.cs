@@ -16,7 +16,7 @@ namespace Example
             Col = col;
         }
 
-        public bool TryMove(int dRow, int dCol, Func<int, int, bool> CanMove)
+        public bool TryMove(int dRow, int dCol, Func < int, int, bool > CanMove)
         {
             int newRow = Row + dRow;
             int newCol = Col + dCol;
