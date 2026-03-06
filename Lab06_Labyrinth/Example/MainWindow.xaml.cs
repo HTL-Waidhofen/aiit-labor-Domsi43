@@ -1,163 +1,263 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using System.Windows.Controls;
 
 namespace Example
 {
     public partial class MainWindow : Window
     {
-        private char[,] _maze;
-        private int _rows;
-        private int _cols;
-        private const int CellSize = 20;
-        private Figur _player;
-        private Rectangle _playerRect;
+        const int CellSize = 20;
+
+        char[,] maze;
+        int rows;
+        int cols;
+
+        Figur player;
+        Rectangle playerRect;
+
+        List<Wand> waende = new List<Wand>();
 
         public MainWindow()
         {
             InitializeComponent();
 
-            Loaded += MainWindow_Loaded;
-
-           
-            PreviewKeyDown += Window_KeyDown;
+            Loaded += LoadGame;
             KeyDown += Window_KeyDown;
         }
 
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        void LoadGame(object sender, RoutedEventArgs e)
         {
-          
-            this.Focus();
-            Keyboard.Focus(this);
-            FocusManager.SetFocusedElement(this, this);
+            string[] lines = File.ReadAllLines("maze_6x6.txt");
 
-            string path = "maze_6x6.txt";
-            if (!File.Exists(path))
+            rows = lines.Length;
+            cols = lines[0].Length;
+
+            maze = new char[rows, cols];
+
+            for (int i = 0; i < rows; i++)
             {
-                MessageBox.Show($"Datei nicht gefunden: {path}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            string[] lines = File.ReadAllLines(path).Select(l => l.Replace("\r", "")).ToArray();
-            _rows = lines.Length;
-            _cols = lines.Max(l => l.Length);
-
-            _maze = new char[_rows, _cols];
-
-            
-            for (int i = 0; i < _rows; i++)
-            {
-                for (int j = 0; j < _cols; j++)
+                for (int j = 0; j < cols; j++)
                 {
-                    _maze[i, j] = (j < lines[i].Length) ? lines[i][j] : ' ';
+                    maze[i, j] = lines[i][j];
+
+                    if (maze[i, j] == '#')
+                        CreateWall(i, j);
+
+                    if (maze[i, j] == 'X')
+                        player = new Figur(i, j);
                 }
             }
 
-           
-            Spielfeld.Width = _cols * CellSize;
-            Spielfeld.Height = _rows * CellSize;
+            CreatePlayer();
+        }
 
-            
-            bool foundPlayer = false;
-            for (int i = 0; i < _rows; i++)
-            {
-                for (int j = 0; j < _cols; j++)
-                {
-                    if (_maze[i, j] == '#')
-                    {
-                        var wall = new Rectangle
-                        {
-                            Fill = Brushes.Black,
-                            Width = CellSize,
-                            Height = CellSize
-                        };
-                        Canvas.SetTop(wall, i * CellSize);
-                        Canvas.SetLeft(wall, j * CellSize);
-                        Spielfeld.Children.Add(wall);
-                    }
-                    else if (_maze[i, j] == 'X' && !foundPlayer)
-                    {
-                        _player = new Figur(i, j);
-                        foundPlayer = true;
-                    }
-                }
-            }
+        void CreateWall(int row, int col)
+        {
+            Wand wand = new Wand(row, col);
 
-            if (!foundPlayer)
+            Rectangle rect = new Rectangle
             {
-          
-                _player = new Figur(0, 0);
-            }
-
-            
-            _playerRect = new Rectangle
-            {
-                Fill = Brushes.Red,
                 Width = CellSize,
-                Height = CellSize
+                Height = CellSize,
+                Fill = Brushes.Black
             };
-            Spielfeld.Children.Add(_playerRect);
-            UpdatePlayerVisual();
+
+            Canvas.SetTop(rect, row * CellSize);
+            Canvas.SetLeft(rect, col * CellSize);
+
+            wand.Rect = rect;
+
+            waende.Add(wand);
+
+            Spielfeld.Children.Add(rect);
         }
 
-        private void UpdatePlayerVisual()
+        void CreatePlayer()
         {
-            if (_playerRect == null || _player == null)
-                return;
+            playerRect = new Rectangle
+            {
+                Width = CellSize,
+                Height = CellSize,
+                Fill = Brushes.Red
+            };
 
-            Canvas.SetTop(_playerRect, _player.Row * CellSize);
-            Canvas.SetLeft(_playerRect, _player.Col * CellSize);
+            Spielfeld.Children.Add(playerRect);
+
+            UpdatePlayer();
         }
 
-        private bool CanMoveTo(int row, int col)
+        void UpdatePlayer()
         {
-            if (row < 0 || row >= _rows || col < 0 || col >= _cols)
-                return false;
-
-            return _maze[row, col] != '#';
+            Canvas.SetTop(playerRect, player.Row * CellSize);
+            Canvas.SetLeft(playerRect, player.Col * CellSize);
         }
 
-        private void Window_KeyDown(object sender, KeyEventArgs e)
+        bool CanMove(int row, int col)
+        {
+            foreach (var wand in waende)
+            {
+                if (wand.Row == row && wand.Col == col)
+                    return false;
+            }
+
+            return true;
+        }
+
+        void Window_KeyDown(object sender, KeyEventArgs e)
         {
             int dRow = 0;
             int dCol = 0;
 
-            switch (e.Key)
-            {
-                case Key.W:
-                case Key.Up:
-                    dRow = -1;
-                    break;
-                case Key.S:
-                case Key.Down:
-                    dRow = 1;
-                    break;
-                case Key.A:
-                case Key.Left:
-                    dCol = -1;
-                    break;
-                case Key.D:
-                case Key.Right:
-                    dCol = 1;
-                    break;
-                default:
-                    return;
-            }
+            if (e.Key == Key.W || e.Key == Key.Up) dRow = -1;
+            if (e.Key == Key.S || e.Key == Key.Down) dRow = 1;
+            if (e.Key == Key.A || e.Key == Key.Left) dCol = -1;
+            if (e.Key == Key.D || e.Key == Key.Right) dCol = 1;
 
-            
-            if (_player == null)
-                return;
-
-            if (_player.TryMove(dRow, dCol, CanMoveTo))
-            {
-                UpdatePlayerVisual();
-                e.Handled = true; 
-            }
+            if (player.TryMove(dRow, dCol, CanMove))
+                UpdatePlayer();
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+using System.Collections.Generic;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+namespace Example
+{
+    public partial class MainWindow : Window
+    {
+        const int CellSize = 20;
+
+        char[,] maze;
+        int rows;
+        int cols;
+
+        Figur player;
+        Rectangle playerRect;
+
+        List<Wand> waende = new List<Wand>();
+
+        public MainWindow()
+        {
+            InitializeComponent();
+
+            Loaded += LoadGame;
+            KeyDown += Window_KeyDown;
+        }
+
+        void LoadGame(object sender, RoutedEventArgs e)
+        {
+            string[] lines = File.ReadAllLines("maze_6x6.txt");
+
+            rows = lines.Length;
+            cols = lines[0].Length;
+
+            maze = new char[rows, cols];
+
+            for (int i = 0; i < rows; i++)
+            {
+                for (int j = 0; j < cols; j++)
+                {
+                    maze[i, j] = lines[i][j];
+
+                    if (maze[i, j] == '#')
+                        CreateWall(i, j);
+
+                    if (maze[i, j] == 'X')
+                        player = new Figur(i, j);
+                }
+            }
+
+            CreatePlayer();
+        }
+
+        void CreateWall(int row, int col)
+        {
+            Wand wand = new Wand(row, col);
+
+            Rectangle rect = new Rectangle
+            {
+                Width = CellSize,
+                Height = CellSize,
+                Fill = Brushes.Black
+            };
+
+            Canvas.SetTop(rect, row * CellSize);
+            Canvas.SetLeft(rect, col * CellSize);
+
+            wand.Rect = rect;
+
+            waende.Add(wand);
+
+            Spielfeld.Children.Add(rect);
+        }
+
+        void CreatePlayer()
+        {
+            playerRect = new Rectangle
+            {
+                Width = CellSize,
+                Height = CellSize,
+                Fill = Brushes.Red
+            };
+
+            Spielfeld.Children.Add(playerRect);
+
+            UpdatePlayer();
+        }
+
+        void UpdatePlayer()
+        {
+            Canvas.SetTop(playerRect, player.Row * CellSize);
+            Canvas.SetLeft(playerRect, player.Col * CellSize);
+        }
+
+        bool CanMove(int row, int col)
+        {
+            foreach (var wand in waende)
+            {
+                if (wand.Row == row && wand.Col == col)
+                    return false;
+            }
+
+            return true;
+        }
+
+        void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            int dRow = 0;
+            int dCol = 0;
+
+            if (e.Key == Key.W || e.Key == Key.Up) dRow = -1;
+            if (e.Key == Key.S || e.Key == Key.Down) dRow = 1;
+            if (e.Key == Key.A || e.Key == Key.Left) dCol = -1;
+            if (e.Key == Key.D || e.Key == Key.Right) dCol = 1;
+
+            if (player.TryMove(dRow, dCol, CanMove))
+                UpdatePlayer();
+        }
+    }
+}
+*/
