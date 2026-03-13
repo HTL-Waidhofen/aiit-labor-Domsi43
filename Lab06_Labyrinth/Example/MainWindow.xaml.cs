@@ -1,22 +1,28 @@
-﻿using System;
+﻿    using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace Example
 {
     public partial class MainWindow : Window
     {
-        
         List<Goodie> goodies = new List<Goodie>();
+        List<Enemy> enemies = new List<Enemy>();
 
         const int CellSize = 20;
-        const int ActiveGoodieCount = 3; 
+        const int ActiveGoodieCount = 3;
+        const int ActiveEnemyCount = 2;
+        const int InitialPoints = 5;
+        const int DamagePerHit = 1;
+        const int WinThreshold = 25; 
 
         char[,] maze;
         int rows;
@@ -30,6 +36,9 @@ namespace Example
         Random rnd = new Random();
 
         int goodieCount = 0;
+        int playerPoints = InitialPoints;
+
+        DispatcherTimer enemyTimer;
 
         public MainWindow()
         {
@@ -60,7 +69,7 @@ namespace Example
                         player = new Figur(i, j);
                 }
             }
-         
+
             if (player == null)
                 player = new Figur(0, 0);
 
@@ -68,7 +77,11 @@ namespace Example
 
             EnsureActiveGoodies();
 
+            EnsureActiveEnemies();
+            StartEnemyTimer();
+
             UpdateGoodieCounter();
+            UpdatePointsCounter();
         }
 
         void CreateWall(int row, int col)
@@ -129,6 +142,9 @@ namespace Example
 
         void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            if (GameOverOverlay.Visibility == Visibility.Visible || WinOverlay.Visibility == Visibility.Visible)
+                return;
+
             int dRow = 0;
             int dCol = 0;
 
@@ -140,16 +156,21 @@ namespace Example
             if (player.TryMove(dRow, dCol, CanMove))
             {
                 UpdatePlayer();
-
+                
                 var collected = goodies.Find(g => g.Row == player.Row && g.Col == player.Col);
                 if (collected != null)
                 {
                     OnGoodieCollected(collected);
                 }
+
+                var ecoll = enemies.Find(en => en.Row == player.Row && en.Col == player.Col);
+                if (ecoll != null)
+                {
+                    OnPlayerEaten();
+                }
             }
         }
 
-        
         void OnGoodieCollected(Goodie collected)
         {
             if (collected.Rect != null && Spielfeld.Children.Contains(collected.Rect))
@@ -158,8 +179,16 @@ namespace Example
             goodies.Remove(collected);
             goodieCount++;
             UpdateGoodieCounter();
+
+            if (goodieCount >= WinThreshold)
+            {
+                Win();
+                return;
+            }
+
             EnsureActiveGoodies();
         }
+
         void UpdateGoodieCounter()
         {
             if (GoodieCounter != null)
@@ -167,13 +196,25 @@ namespace Example
                 GoodieCounter.Text = goodieCount.ToString();
             }
         }
+        void UpdatePointsCounter()
+        {
+            if (PointsCounter != null)
+            {
+                PointsCounter.Text = playerPoints.ToString();
+            }
+        }
+
         void EnsureActiveGoodies()
         {
+            if (WinOverlay.Visibility == Visibility.Visible || GameOverOverlay.Visibility == Visibility.Visible)
+                return;
+
             while (goodies.Count < ActiveGoodieCount)
             {
                 PlaceGoodieRandom();
             }
         }
+
         void PlaceGoodieRandom()
         {
             if (maze == null || rows == 0 || cols == 0)
@@ -190,16 +231,12 @@ namespace Example
                 if (r == player.Row && c == player.Col)
                     continue;
 
-                bool occupiedByGoodie = false;
-                foreach (var g in goodies)
-                {
-                    if (g.Row == r && g.Col == c)
-                    {
-                        occupiedByGoodie = true;
-                        break;
-                    }
-                }
+                bool occupiedByGoodie = goodies.Any(g => g.Row == r && g.Col == c);
                 if (occupiedByGoodie)
+                    continue;
+
+                bool occupiedByEnemy = enemies.Any(en => en.Row == r && en.Col == c);
+                if (occupiedByEnemy)
                     continue;
 
                 var rect = new Rectangle
@@ -220,6 +257,147 @@ namespace Example
                 Spielfeld.Children.Add(rect);
                 return;
             }
+        }
+
+        void EnsureActiveEnemies()
+        {
+            while (enemies.Count < ActiveEnemyCount)
+            {
+                PlaceEnemyRandom();
+            }
+        }
+
+        void PlaceEnemyRandom()
+        {
+            if (maze == null || rows == 0 || cols == 0)
+                return;
+
+            for (int attempt = 0; attempt < 1000; attempt++)
+            {
+                int r = rnd.Next(rows);
+                int c = rnd.Next(cols);
+
+                if (maze[r, c] == '#')
+                    continue;
+
+                if (r == player.Row && c == player.Col)
+                    continue;
+
+                if (goodies.Any(g => g.Row == r && g.Col == c))
+                    continue;
+
+                if (enemies.Any(en => en.Row == r && en.Col == c))
+                    continue;
+
+                var rect = new Rectangle
+                {
+                    Width = CellSize,
+                    Height = CellSize,
+                    Fill = new ImageBrush(new BitmapImage(new Uri("C:\\Github Zamberl\\aiit-labor-Domsi43\\Lab06_Labyrinth\\Salat.jpg")))
+                    {
+                        Stretch = Stretch.UniformToFill
+                    }
+                };
+
+                Canvas.SetTop(rect, r * CellSize);
+                Canvas.SetLeft(rect, c * CellSize);
+
+                var enemy = new Enemy(r, c, rect);
+                enemies.Add(enemy);
+                Spielfeld.Children.Add(rect);
+                return;
+            }
+        }
+        void StartEnemyTimer()
+        {
+            enemyTimer = new DispatcherTimer();
+            enemyTimer.Interval = TimeSpan.FromMilliseconds(500);
+            enemyTimer.Tick += EnemyTimer_Tick;
+            enemyTimer.Start();
+        }
+        void StopEnemyTimer()
+        {
+            if (enemyTimer != null)
+            {
+                enemyTimer.Stop();
+                enemyTimer.Tick -= EnemyTimer_Tick;
+                enemyTimer = null;
+            }
+        }
+        void EnemyTimer_Tick(object sender, EventArgs e)
+        {
+            MoveEnemies();
+        }
+        void MoveEnemies()
+        {
+            if (GameOverOverlay.Visibility == Visibility.Visible || WinOverlay.Visibility == Visibility.Visible)
+                return;
+
+            foreach (var en in enemies.ToList())
+            {
+                var options = new List<Tuple<int,int>>();
+
+                var deltas = new (int dr, int dc)[] { (-1,0), (1,0), (0,-1), (0,1) };
+                foreach (var d in deltas)
+                {
+                    int nr = en.Row + d.dr;
+                    int nc = en.Col + d.dc;
+                    if (nr < 0 || nr >= rows || nc < 0 || nc >= cols)
+                        continue;
+                    if (maze[nr, nc] == '#')
+                        continue;
+
+                    if (enemies.Any(other => other != en && other.Row == nr && other.Col == nc))
+                        continue;
+                    options.Add(Tuple.Create(nr, nc));
+                }
+
+                if (options.Count == 0)
+                    continue;
+
+                var pick = options[rnd.Next(options.Count)];
+                en.Row = pick.Item1;
+                en.Col = pick.Item2;
+
+                if (en.Rect != null)
+                {
+                    Canvas.SetTop(en.Rect, en.Row * CellSize);
+                    Canvas.SetLeft(en.Rect, en.Col * CellSize);
+                }
+
+                if (en.Row == player.Row && en.Col == player.Col)
+                {
+                    OnPlayerEaten();
+                }
+            }
+        }
+
+        void OnPlayerEaten()
+        {
+            playerPoints -= DamagePerHit;
+            if (playerPoints < 0) playerPoints = 0;
+            UpdatePointsCounter();
+
+            if (playerPoints <= 0)
+            {
+                GameOver();
+            }
+        }
+
+        void GameOver()
+        {
+            StopEnemyTimer();
+            GameOverOverlay.Visibility = Visibility.Visible;
+        }
+
+        void Win()
+        {
+            StopEnemyTimer();
+
+            goodies.Clear();
+
+            WinDetails.Text = $"Gesammelte Goodies: {goodieCount}";
+            WinOverlay.Visibility = Visibility.Visible;
         }
     }
 }
